@@ -7,6 +7,12 @@ import java.sql.SQLException;
 
 public class Main {
     public static void main(String[] args) {
+        UserDao userDao = new UserDao();
+
+        User user1 = new User();
+        user1.setUserName("Kamiloxx");
+        user1.setEmail("nowymailkamila@gmail.com");
+        System.out.println("ID: " + user1.getId() +", username: " + user1.getUserName() +", email: " + user1.getEmail());
 /*
         User user = new User();
         user.setEmail("example_email@ee.com");
@@ -28,7 +34,10 @@ public class Main {
 */
 
 //        UserDao.delete(7);
-         User[] users = UserDao.findAll();
-        System.out.println(users[3].getUserName());
+//         User[] users = userDao.findAll();
+//        System.out.println(users[3].getId());
+
+        userDao.updateUserInfo(user1);
+
     }
 }

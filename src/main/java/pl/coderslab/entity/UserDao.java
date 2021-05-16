@@ -10,10 +10,11 @@ import java.util.Scanner;
 public class UserDao {
     private static final String CREATE_USER_QUERY = "INSERT INTO users(username, email, password) VALUES (?, ?, ?)";
     private static final String READ_USER_QUERY = "SELECT * FROM users WHERE ID = ?";
-    private static final String UPDATE_USER_QUERY = "update users set username = ?,email = ?, password = ? where id = ?";
+    private static final String UPDATE_USER_QUERY = "update users set username = ?,email = ? where id = ?";
+    private static final String UPDATE_PASSWORD_QUERY = "update users set password = ? where id = ?";
     private static final String DELETE_USER_QUERY = "delete from users where id = ?";
 
-    public static void create_user(User user) {
+    public void create_user(User user) {
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement preStmt = conn.prepareStatement(CREATE_USER_QUERY, PreparedStatement.RETURN_GENERATED_KEYS)) {
 
@@ -36,13 +37,31 @@ public class UserDao {
 
     }
 
-    public static String hashPassword(String password) {
+    public String hashPassword(String password) {
 
         return BCrypt.hashpw(password, BCrypt.gensalt());
 
     }
+    //pobieranie id uzytkownika z klawiatury
+    private int getUserId() {
+        System.out.println("Podaj id użytkownika: ");
+        Scanner scan = new Scanner(System.in);
+        int userID;
+        while (true) {
+            if (scan.hasNextInt()) {
+                userID = scan.nextInt();
+                if (userID > 0) {
+                    return userID;
+                }
+            } else {
+                scan.next();
+            }
+            System.out.println("Podaj prawidłową dodatnią liczbę całkowitą");
+        }
+    }
 
-    public static User read(int userId) {
+
+    public User read(int userId) {
         User readedUser = new User();
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement prepStmt = conn.prepareStatement(READ_USER_QUERY)) {
@@ -50,10 +69,9 @@ public class UserDao {
             prepStmt.executeQuery();
             ResultSet rs = prepStmt.getResultSet();
             if (rs.next()) {
-
                 readedUser.setId(rs.getInt("id"));
                 readedUser.setUserName(rs.getString("username"));
-                readedUser.setPassword(hashPassword(rs.getString("password")));
+                readedUser.setPassword(rs.getString("password"));
                 readedUser.setEmail(rs.getString("email"));
             } else {
                 readedUser.setUserName(null);
@@ -69,14 +87,16 @@ public class UserDao {
         return readedUser;
     }
 
-    public static void update(User user) {
+    public void updateUserInfo(User user) {
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement prep = conn.prepareStatement(UPDATE_USER_QUERY)) {
-            prep.setInt(4, user.getId());
+            int userID = getUserId();
+            if (passCheck(userID)){
+            prep.setInt(3, userID);
             prep.setString(1, user.getUserName());
             prep.setString(2, user.getEmail());
-            prep.setString(3, hashPassword(user.getPassword()));
-            prep.executeUpdate();
+            prep.executeUpdate();}
+            System.out.println("Dane użytkownika zostały zaktualizowane");
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -84,7 +104,51 @@ public class UserDao {
         }
     }
 
-    public static void delete(int userId) {
+    public void updatePassword() {
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement prep = conn.prepareStatement(UPDATE_PASSWORD_QUERY)) {
+            Scanner scanner = new Scanner(System.in);
+            //pobrana wartość z klawiatury o id użytkownika do zmiany hasła
+            int userID = getUserId();
+
+            if (passCheck(userID)) {
+
+                System.out.println("Podaj nowe hasło: ");
+                String newPassword = scanner.next();
+                prep.setString(1, hashPassword(newPassword));
+                prep.setInt(2, userID);
+                prep.executeUpdate();
+                System.out.println("Hasło zostało zaktualizowane");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private boolean passCheck(int userID) {
+        boolean check = false;
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement prep = conn.prepareStatement("SELECT password FROM users where id = ?")) {
+            Scanner scan = new Scanner(System.in);
+            System.out.println("podaj hasło użytkownika");
+            String candidate = scan.next();
+            prep.setInt(1, userID);
+            ResultSet rs = prep.executeQuery();
+            rs.next();
+            if (BCrypt.checkpw(candidate, rs.getString(1))) {
+                System.out.println("Ok");
+                check = true;
+            } else {
+                System.out.println("Podane hasło jest nieprawidłowe");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return check;
+    }
+
+    public void delete(int userId) {
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement prep = conn.prepareStatement(DELETE_USER_QUERY)) {
 
@@ -99,17 +163,12 @@ public class UserDao {
 
     }
 
-    public static User[] findAll() {
+    public User[] findAll() {
         User[] users = new User[0];
 
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement st = conn.prepareStatement("SELECT * FROM users")) {
             ResultSet rs = st.executeQuery();
-/*            PreparedStatement prep = conn.prepareStatement("SELECT COUNT(*) AS rowcount FROM users");
-            ResultSet row_number = prep.executeQuery();
-            row_number.next();
-            int rowNumber = row_number.getInt("rowcount");
-            System.out.println("row count " + rowNumber);*/
             while (rs.next()) {
                 User templateUser = new User();
                 templateUser.setUserName(rs.getString("username"));
@@ -126,7 +185,7 @@ public class UserDao {
         return users;
     }
 
-    private static User[] addToArray(User u, User[] users) {
+    private User[] addToArray(User u, User[] users) {
         User[] tmpUsers = Arrays.copyOf(users, users.length + 1);
 
         tmpUsers[users.length] = u;
