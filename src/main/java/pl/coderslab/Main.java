@@ -4,15 +4,14 @@ import pl.coderslab.entity.User;
 import pl.coderslab.entity.UserDao;
 
 import java.sql.SQLException;
+import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
         UserDao userDao = new UserDao();
 
         User user1 = new User();
-        user1.setUserName("Kamiloxx");
-        user1.setEmail("nowymailkamila@gmail.com");
-        System.out.println("ID: " + user1.getId() +", username: " + user1.getUserName() +", email: " + user1.getEmail());
+
 /*
         User user = new User();
         user.setEmail("example_email@ee.com");
@@ -37,7 +36,32 @@ public class Main {
 //         User[] users = userDao.findAll();
 //        System.out.println(users[3].getId());
 
-        userDao.updateUserInfo(user1);
+
+        User user3 = userDao.read(8);
+        System.out.println(user3.getUserName());
+    }
+
+    public static int getUserId() {
+        System.out.println("Podaj id użytkownika: ");
+        Scanner scan = new Scanner(System.in);
+        int userID;
+        while (true) {
+            if (scan.hasNextInt()) {
+                userID = scan.nextInt();
+                if (userID > 0) {
+                    return userID;
+                }
+            } else {
+                scan.next();
+            }
+            System.out.println("Podaj prawidłową dodatnią liczbę całkowitą");
+        }
+    }
+    public static String getNewPassword(){
+        System.out.println("Podaj nowe hasło: ");
+        Scanner scan = new Scanner(System.in);
+        return scan.next();
 
     }
+
 }

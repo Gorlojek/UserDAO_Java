@@ -3,9 +3,13 @@ package pl.coderslab.entity;
 import org.mindrot.jbcrypt.BCrypt;
 import pl.coderslab.DbUtil;
 
+
 import java.sql.*;
 import java.util.Arrays;
 import java.util.Scanner;
+
+import static pl.coderslab.Main.getNewPassword;
+import static pl.coderslab.Main.getUserId;
 
 public class UserDao {
     private static final String CREATE_USER_QUERY = "INSERT INTO users(username, email, password) VALUES (?, ?, ?)";
@@ -14,7 +18,7 @@ public class UserDao {
     private static final String UPDATE_PASSWORD_QUERY = "update users set password = ? where id = ?";
     private static final String DELETE_USER_QUERY = "delete from users where id = ?";
 
-    public void create_user(User user) {
+    public User create_user(User user) {
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement preStmt = conn.prepareStatement(CREATE_USER_QUERY, PreparedStatement.RETURN_GENERATED_KEYS)) {
 
@@ -27,12 +31,16 @@ public class UserDao {
 
             ResultSet rs = preStmt.getGeneratedKeys();
             if (rs.next()) {
-                long id = rs.getLong(1);
-                System.out.println("Inserted ID: " + id);
+                int userID = rs.getInt(1);
+                user.setId(userID);
+                System.out.println("Inserted ID: " + userID);
+
             }
+            return user;
 
         } catch (SQLException e) {
             e.printStackTrace();
+            return null;
         }
 
     }
@@ -43,22 +51,6 @@ public class UserDao {
 
     }
     //pobieranie id uzytkownika z klawiatury
-    private int getUserId() {
-        System.out.println("Podaj id użytkownika: ");
-        Scanner scan = new Scanner(System.in);
-        int userID;
-        while (true) {
-            if (scan.hasNextInt()) {
-                userID = scan.nextInt();
-                if (userID > 0) {
-                    return userID;
-                }
-            } else {
-                scan.next();
-            }
-            System.out.println("Podaj prawidłową dodatnią liczbę całkowitą");
-        }
-    }
 
 
     public User read(int userId) {
@@ -73,11 +65,6 @@ public class UserDao {
                 readedUser.setUserName(rs.getString("username"));
                 readedUser.setPassword(rs.getString("password"));
                 readedUser.setEmail(rs.getString("email"));
-            } else {
-                readedUser.setUserName(null);
-                readedUser.setEmail(null);
-                readedUser.setPassword(null);
-
             }
 
         } catch (SQLException e) {
@@ -107,15 +94,12 @@ public class UserDao {
     public void updatePassword() {
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement prep = conn.prepareStatement(UPDATE_PASSWORD_QUERY)) {
-            Scanner scanner = new Scanner(System.in);
-            //pobrana wartość z klawiatury o id użytkownika do zmiany hasła
+
             int userID = getUserId();
 
             if (passCheck(userID)) {
 
-                System.out.println("Podaj nowe hasło: ");
-                String newPassword = scanner.next();
-                prep.setString(1, hashPassword(newPassword));
+                prep.setString(1, hashPassword(getNewPassword()));
                 prep.setInt(2, userID);
                 prep.executeUpdate();
                 System.out.println("Hasło zostało zaktualizowane");
